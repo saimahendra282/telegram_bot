@@ -152,67 +152,44 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
                 logger.error(f"Error sending GIF: {e}")
                 return None
     
-    async def get_random_gif_from_directory(self, directory: str) -> str:
-        """Get a random GIF from a specific directory in the snipe/animated-gifs repo"""
-        # GitHub API URL to get directory contents
-        api_url = f"https://api.github.com/repos/snipe/animated-gifs/contents/{directory}"
+    def get_random_gif(self, feeling: str = None):
+        """Get a random GIF based on feeling/emotion (simplified for now)"""
+        # Fallback GIFs that work reliably
+        fallback_gifs = {
+            'happy': [
+                "https://media1.tenor.com/m/SuB9sd9uT9IAAAAC/anime-happy.gif",
+                "https://media1.tenor.com/m/PL1gYFz_YpkAAAAC/kawaii-anime.gif",
+                "https://media1.tenor.com/m/fxyNZog6380AAAAC/anime-happy.gif"
+            ],
+            'excited': [
+                "https://media1.tenor.com/m/b-z9eI0rMnUAAAAC/anime-excited.gif",
+                "https://media1.tenor.com/m/YiZ5QZuEKrUAAAAC/thumbs-up-anime.gif"
+            ],
+            'sad': [
+                "https://media1.tenor.com/m/7vr7Zt7doeUAAAAC/confused-anime.gif",
+                "https://media1.tenor.com/m/X8gzL9-VQ-YAAAAC/lost-anime.gif"
+            ],
+            'thinking': [
+                "https://media1.tenor.com/m/3T_Q7EiPmrEAAAAC/anime-thinking.gif",
+                "https://media1.tenor.com/m/Sj3Tjd8WmYAAAAAC/thinking-anime.gif"
+            ],
+            'greeting': [
+                "https://media1.tenor.com/m/yP5sa-rZqfcAAAAC/kawaii-anime.gif",
+                "https://media1.tenor.com/m/ZlgJ5k7NbdoAAAAC/anime-wave.gif"
+            ],
+            'grateful': [
+                "https://media1.tenor.com/m/cHg_I2-rFUEAAAAC/bow-anime.gif",
+                "https://media1.tenor.com/m/l8X6Xcl6pUQAAAAC/thanks-anime.gif"
+            ]
+        }
         
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(api_url, timeout=10.0)
-                response.raise_for_status()
-                files = response.json()
-                
-                # Filter for gif/animation files
-                gif_files = [
-                    file for file in files 
-                    if file['type'] == 'file' and 
-                    any(file['name'].lower().endswith(ext) for ext in self.gif_extensions)
-                ]
-                
-                if gif_files:
-                    # Pick a random gif
-                    random_gif = random.choice(gif_files)
-                    # Return the raw GitHub URL
-                    return random_gif['download_url']
-                else:
-                    logger.warning(f"No GIF files found in directory: {directory}")
-                    return None
-                    
-            except Exception as e:
-                logger.error(f"Error fetching GIFs from directory {directory}: {e}")
-                return None
-    
-    async def get_random_gif(self, feeling: str = None):
-        """Get a random GIF based on feeling/emotion"""
-        # If no specific feeling, pick a random feeling
-        if not feeling or feeling not in self.feeling_to_directories:
-            feeling = random.choice(list(self.feeling_to_directories.keys()))
+        # If no specific feeling, pick a random one
+        if not feeling or feeling not in fallback_gifs:
+            feeling = random.choice(list(fallback_gifs.keys()))
         
-        # Get directories for this feeling
-        directories = self.feeling_to_directories[feeling]
-        
-        # Try directories until we find one with GIFs
-        random.shuffle(directories)  # Randomize order
-        
-        for directory in directories:
-            gif_url = await self.get_random_gif_from_directory(directory)
-            if gif_url:
-                return gif_url
-        
-        # Fallback: try a random directory from all available
-        all_directories = [
-            'adorbs', 'Alt-Everything', 'angry-frustrated', 'Approved', 
-            'badass-nailed-it', 'Battle-Stations', 'Biology', 'bored-tired-depressed',
-            'busted', 'bye', 'Cant-Even', 'cheating', 'Childish', 'Coffee',
-            'come-here', 'condescending', 'deal-with-it', 'Debate', 
-            'excited-happy', 'confused', 'dont-understand', 'smug', 'wtf',
-            'shock', 'Surprise', 'thank-you', 'yes', 'oh-hai-friend', 
-            'welcome-friendly', 'Thinking'
-        ]
-        
-        random_directory = random.choice(all_directories)
-        return await self.get_random_gif_from_directory(random_directory)
+        # Get random GIF from that feeling category
+        gif_list = fallback_gifs[feeling]
+        return random.choice(gif_list)
     
     async def generate_gemini_response(self, prompt: str) -> str:
         """Generate response using Gemini API"""
@@ -243,9 +220,8 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
         await self.send_message(chat_id, welcome_message.strip())
         
         # Send a greeting GIF
-        gif_url = await self.get_random_gif('greeting')
-        if gif_url:
-            await self.send_gif(chat_id, gif_url)
+        gif_url = self.get_random_gif('greeting')
+        await self.send_gif(chat_id, gif_url)
     
     async def handle_help_command(self, chat_id: int):
         """Handle /help command"""
@@ -266,9 +242,8 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
         await self.send_message(chat_id, response)
         
         # Send a happy GIF
-        gif_url = await self.get_random_gif('happy')
-        if gif_url:
-            await self.send_gif(chat_id, gif_url)
+        gif_url = self.get_random_gif('happy')
+        await self.send_gif(chat_id, gif_url)
     
     async def handle_resume_command(self, chat_id: int):
         """Handle /resume command - sends Sai's resume PDF"""
@@ -276,9 +251,8 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
         await self.send_document(chat_id, resume_url)
         
         # Send an excited GIF
-        gif_url = await self.get_random_gif('excited')
-        if gif_url:
-            await self.send_gif(chat_id, gif_url)
+        gif_url = self.get_random_gif('excited')
+        await self.send_gif(chat_id, gif_url)
     
     async def handle_message(self, chat_id: int, message_text: str):
         """Handle regular text messages"""
@@ -302,17 +276,15 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
             
             # Send contextual GIF based on feeling (30% chance to keep it not overwhelming)
             if random.random() < 0.3:
-                gif_url = await self.get_random_gif(feeling)
-                if gif_url:
-                    await self.send_gif(chat_id, gif_url)
+                gif_url = self.get_random_gif(feeling)
+                await self.send_gif(chat_id, gif_url)
                     
         except Exception as e:
             logger.error(f"Error generating response: {e}")
             await self.send_message(chat_id, "Oops! Something went wrong while I was thinking. Please try again in a moment.")
             # Send sad GIF for errors
-            gif_url = await self.get_random_gif('sad')
-            if gif_url:
-                await self.send_gif(chat_id, gif_url)
+            gif_url = self.get_random_gif('sad')
+            await self.send_gif(chat_id, gif_url)
     
     def determine_feeling(self, message_text: str) -> str:
         """Determine feeling/emotion based on message content"""
