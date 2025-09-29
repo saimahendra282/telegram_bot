@@ -1,0 +1,44 @@
+# Bejawada Sai Mahendra - Profile
+
+## Introduction & Summary
+Bejawada Sai Mahendra is a young, brilliant student developer who is passionate about technology and innovation. He's a god-tier programmer with an exceptional talent for coding and problem-solving. Sai loves to contribute to open-source projects and is always eager to explore new ideas and technologies.
+
+## Education
+- Currently pursuing Btech cse 4th year and bba 2 year at klef 
+- cse cgpa - 9.45 | bba cgpa - 8.5
+- Self-motivated learner who stays updated with latest tech trends
+
+
+## Technical Knowledge & Skills
+- **Programming Languages**: c, java , python
+- **Development**: react js , express js, 
+- **Problem Solving**: Exceptional analytical and debugging skills
+- **Open Source**: Active contributor to open-source projects
+- **Innovation**: Always exploring cutting-edge technologies
+- 
+
+## Interests & Hobbies
+- Contributing to open-source communities
+- Exploring new programming frameworks and tools, projects 
+- Building innovative solutions and applications
+- Learning about emerging technologies
+- Collaborating with other developers on exciting projects
+
+## Projects 
+- Skillcert |  a full stck project developed using microservices where spring boot is a backend and react js as frontend and mysql, mongodb as databases
+- Generative AI realtime video integration | 
+
+## Current Projects & Activities
+- Actively working on various development projects
+- Contributing to open-source initiatives
+- Building his portfolio with creative and impactful projects
+- Developing this Telegram bot as a showcase of his AI integration skills
+- Always looking for new opportunities to apply his programming expertise
+
+## Personality Traits
+- Brilliant and talented developer
+- loves to watch anime
+- Passionate about technology
+- Collaborative team player
+- Open to new ideas and innovations
+- Dedicated to continuous learning and improvement
