@@ -35,11 +35,10 @@ class SaiBot:
         
         # System instruction for Gemini
         self.system_instruction = f"""
-        You are a cute and expressive assistant without using emojis. When users ask about Sai, Sai Mahendra, or details about me/him, you should respond in a warm, friendly, and slightly playful way based on this information: {self.sai_info}
-        
-        Always be helpful and engaging. If someone asks about Sai specifically, make sure to mention relevant details from the reference information.
-        
-        Respond naturally and conversationally, but keep your responses concise and friendly.
+        You are a cute and expressive assistant without emojis.
+When asked about Sai or Sai Mahendra, reply warmly, playfully, and based on {self.sai_info}.
+Keep answers under 3 lines, concise and friendly.
+Always be helpful, engaging, and respond in multiple languages when possible.
         """
     
     def load_sai_info(self):
@@ -61,13 +60,13 @@ class SaiBot:
             Bejawada Sai Mahendra is a young, brilliant student developer who is passionate about technology and innovation. 
             He's a god-tier programmer with exceptional talent for coding and problem-solving. Currently pursuing BTech CSE 4th year 
             and BBA 2nd year at KLEF with excellent academics (CSE CGPA: 9.45, BBA CGPA: 8.5). 
-            Skills include C, Java, Python, React.js, Express.js. Notable projects include Skillcert (full-stack microservices) 
-            and Generative AI realtime video integration. He loves anime and is always exploring new technologies.
+            Skills include C, Java, Python, React.js, Express.js, sql and what not. Notable projects include Skillcert (full-stack microservices) 
+            and Generative AI realtime video integration and more. He loves anime and is always exploring new technologies.
             """
             logger.warning("re.txt file not found, using default info")
             
         except Exception as e:
-            self.sai_info = "Sai Mahendra is a god tier programmer"
+            self.sai_info = "Sai Mahendra is a talented programmer"
             logger.error(f"Error loading Sai info: {e}")
     
     async def send_message(self, chat_id: int, text: str):
@@ -86,6 +85,28 @@ class SaiBot:
                 return response.json()
             except Exception as e:
                 logger.error(f"Error sending message: {e}")
+                raise
+    
+    async def send_document(self, chat_id: int, document_url: str, caption: str = None):
+        """Send document/PDF to Telegram chat"""
+        url = f"https://api.telegram.org/bot{self.bot_token}/sendDocument"
+        payload = {
+            "chat_id": chat_id,
+            "document": document_url,
+        }
+        if caption:
+            payload["caption"] = caption
+            payload["parse_mode"] = "HTML"
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(url, json=payload, timeout=30.0)
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                logger.error(f"Error sending document: {e}")
+                # Fallback to sending a message with the link
+                await self.send_message(chat_id, f"📄 Here's Sai's resume: {document_url}")
                 raise
     
     async def generate_gemini_response(self, prompt: str) -> str:
@@ -112,11 +133,7 @@ class SaiBot:
     async def handle_start_command(self, chat_id: int):
         """Handle /start command"""
         welcome_message = """
-🤖 <b>Hello there! I'm Sai's personal assistant bot powered by Gemini AI.</b>
-
-Feel free to ask me anything! If you want to know about Sai Mahendra, just ask and I'll tell you all about this amazing programmer.
-
-Just type your message and I'll respond to you in a cute and friendly way!
+ <h1>Hello visitor </h1><br><p>I am telegram bot created by sai mahendra, you can ask me anything about him i will try to tell about his work and details as per data i trained for 
         """
         await self.send_message(chat_id, welcome_message.strip())
     
@@ -126,9 +143,8 @@ Just type your message and I'll respond to you in a cute and friendly way!
 📋 <b>Available commands:</b>
 • /start - Start the bot and get a welcome message
 • /help - Show this help message  
-• /about_sai - Get information about Sai Mahendra
-
-You can also just send me any message and I'll respond using Gemini AI!
+• /about_sai - Just some self info about me
+• /resume - Get Sai's resume PDF
         """
         await self.send_message(chat_id, help_text.strip())
     
@@ -138,6 +154,11 @@ You can also just send me any message and I'll respond using Gemini AI!
             "Tell me about Sai Mahendra, the programmer. Be cute and expressive but don't use emojis."
         )
         await self.send_message(chat_id, response)
+    
+    async def handle_resume_command(self, chat_id: int):
+        """Handle /resume command - sends Sai's resume PDF"""
+        resume_url = "https://raw.githubusercontent.com/saimahendra282/telegram_bot/main/allpurposefin.pdf"
+        await self.send_document(chat_id, resume_url)
     
     async def handle_message(self, chat_id: int, message_text: str):
         """Handle regular text messages"""
@@ -191,6 +212,8 @@ async def webhook(request: Request):
                 await bot.handle_help_command(chat_id)
             elif text.startswith('/about_sai'):
                 await bot.handle_about_sai_command(chat_id)
+            elif text.startswith('/resume'):
+                await bot.handle_resume_command(chat_id)
             else:
                 await bot.handle_message(chat_id, text)
         

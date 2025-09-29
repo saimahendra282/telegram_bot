@@ -1,44 +1,90 @@
-# Bejawada Sai Mahendra - Profile
-
+Bejawada Sai Mahendra - Profile
 ## Introduction & Summary
-Bejawada Sai Mahendra is a young, brilliant student developer who is passionate about technology and innovation. He's a god-tier programmer with an exceptional talent for coding and problem-solving. Sai loves to contribute to open-source projects and is always eager to explore new ideas and technologies.
+
+Bejawada Sai Mahendra is a young, brilliant student developer who is passionate about technology and innovation. He's a god-tier programmer with exceptional talent in coding and problem-solving. Sai loves to contribute to open-source projects and is always eager to explore new ideas and technologies.
 
 ## Education
-- Currently pursuing Btech cse 4th year and bba 2 year at klef 
-- cse cgpa - 9.45 | bba cgpa - 8.5
-- Self-motivated learner who stays updated with latest tech trends
 
+Currently pursuing B.Tech CSE 4th year and BBA 2nd year at KLEF
 
-## Technical Knowledge & Skills
-- **Programming Languages**: c, java , python
-- **Development**: react js , express js, 
-- **Problem Solving**: Exceptional analytical and debugging skills
-- **Open Source**: Active contributor to open-source projects
-- **Innovation**: Always exploring cutting-edge technologies
-- 
+CSE CGPA - 9.45 | BBA CGPA - 8.5
+
+Self-motivated learner who stays updated with the latest tech trends
+
+##Technical Knowledge & Skills
+
+Programming Languages: C, Java, Python, SQL
+
+Development: React.js, Express.js
+
+Problem Solving: Exceptional analytical and debugging skills
+
+Open Source: Active contributor to open-source projects
+
+Innovation: Always exploring cutting-edge technologies
 
 ## Interests & Hobbies
-- Contributing to open-source communities
-- Exploring new programming frameworks and tools, projects 
-- Building innovative solutions and applications
-- Learning about emerging technologies
-- Collaborating with other developers on exciting projects
 
-## Projects 
-- Skillcert |  a full stck project developed using microservices where spring boot is a backend and react js as frontend and mysql, mongodb as databases
-- Generative AI realtime video integration | 
+Contributing to open-source communities
+
+Exploring new programming frameworks, tools, and projects
+
+Building innovative solutions and applications
+
+Learning about emerging technologies
+
+Collaborating with other developers on exciting projects
+
+## Projects
+
+Skillcert | A full-stack project developed using microservices where Spring Boot is the backend and React.js as the frontend, with MySQL and MongoDB as databases
+
+Generative AI real-time video integration | A simple web app using HTML, CSS, and jQuery where it takes a video stream as input from the user and generates responses back
+
+Paatalu | Full-stack songs playing app, frontend - Vite + React.js & backend - unofficial JioSaavn API in TypeScript | Backend can be scaled as much as needed | Authentication and CRUD operations are implemented in the frontend itself using Supabase
+
+Chrome extensions related to KLEF academics | Built several Chrome extensions to reduce repetitive tasks | Integrated Gemini API
+
+Canva integration with Gemini | A simple HTML + JS web app where the user can draw in a canvas and ask questions about that picture
+
+Free text translate API | Learned to build a separate backend instance for a translation API forked from an NPM package
+
+PY_TELUGU_VERSION | His first Python package that can convert English Python keywords into Telugu keywords using simple JSON keyword matching | Still in progress
+
+P2P video calling web app using AWS services | AWS services used - S3 for static file hosting, Lambda for serverless backend config, DynamoDB as database, CloudFront for CDN, EC2 for microservice hosting, and API Gateway | Backend architecture designed with 2 microservices and implemented magic link concept for authentication
+
+Autotyper | Tried building an Autotyper clone that can bypass detectors and type the text provided in any text field
+
+Other starter projects | Small web projects cloned and learned from YouTube tutorials, Python automations like grabbing grades and pending assignments from LMS, and small bot scripts such as a prototype version of Jarvis
 
 ## Current Projects & Activities
-- Actively working on various development projects
-- Contributing to open-source initiatives
-- Building his portfolio with creative and impactful projects
-- Developing this Telegram bot as a showcase of his AI integration skills
-- Always looking for new opportunities to apply his programming expertise
 
-## Personality Traits
-- Brilliant and talented developer
-- loves to watch anime
-- Passionate about technology
-- Collaborative team player
-- Open to new ideas and innovations
-- Dedicated to continuous learning and improvement
+Learning ServiceNow and its automation frameworks
+
+Focusing on implementing his capstone project, which is Agentic AI in mental well-being
+
+Looking for job opportunities to apply his programming expertise
+
+Personality Traits
+
+Brilliant and talented developer
+
+Loves to watch anime
+
+Passionate about technology
+
+Collaborative team player
+
+Open to new ideas and innovations
+
+Dedicated to continuous learning and improvement
+
+## contact details 
+portfolio - https://bejawadasaimahendra.vercel.app
+linkedin  - https://www.linkedin.com/in/bejawada-sai-mahendra-b18289212/
+github - https://github.com/saimahendra282
+medium - https://medium.com/@bejawadasaimahendra
+whatsapp - https://api.whatsapp.com/send?phone=919676541304
+
+## resume link 
+https://drive.google.com/file/d/1tZuaSjcdXapw64t-1K6FGdmuvGP_-JM5/view
