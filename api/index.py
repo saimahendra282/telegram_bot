@@ -42,18 +42,27 @@ When talking about Sai Mahendra, be enthusiastic and proud - he's genuinely amaz
 Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
         """
         
-        # GIF categories for different moods/contexts
-        self.gif_moods = {
-            'greeting': ['anime hello', 'cute wave', 'kawaii greeting', 'anime wave'],
-            'excited': ['anime excited', 'anime happy', 'kawaii excited', 'cute celebration'],
-            'thinking': ['anime thinking', 'anime confused', 'kawaii hmm'],
-            'proud': ['anime proud', 'kawaii proud', 'anime thumbs up'],
-            'thanks': ['anime thank you', 'kawaii thanks', 'cute bow'],
-            'bye': ['anime goodbye', 'cute bye', 'kawaii wave'],
-            'projects': ['anime coding', 'kawaii computer', 'anime work'],
-            'resume': ['anime professional', 'kawaii work', 'anime office'],
-            'default': ['kawaii', 'anime cute', 'cute anime girl', 'chibi']
+        # Map feelings to gif directories from snipe/animated-gifs repo
+        self.feeling_to_directories = {
+            'happy': ['excited-happy', 'adorbs', 'Approved'],
+            'excited': ['excited-happy', 'badass-nailed-it', 'Approved'],
+            'sad': ['bored-tired-depressed', 'Cant-Even', 'busted'],
+            'thinking': ['confused', 'dont-understand', 'Thinking'],
+            'serious': ['smug', 'deal-with-it', 'badass-nailed-it', 'condescending'],
+            'greeting': ['oh-hai-friend', 'welcome-friendly', 'come-here'],
+            'grateful': ['thank-you', 'Approved', 'adorbs'],
+            'cute': ['adorbs', 'excited-happy'],
+            'approved': ['Approved', 'yes', 'badass-nailed-it'],
+            'wtf': ['wtf', 'shock', 'Surprise', 'Cant-Even', 'confused'],
+            'angry': ['angry-frustrated', 'Battle-Stations'],
+            'bye': ['bye', 'deal-with-it'],
+            'coffee': ['Coffee'],
+            'childish': ['Childish'],
+            'debate': ['Debate', 'condescending']
         }
+        
+        # Common GIF file extensions
+        self.gif_extensions = ['.gif', '.webp', '.mp4']
     
     def load_sai_info(self):
         """Load information about Sai from re.txt file"""
@@ -143,39 +152,67 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
                 logger.error(f"Error sending GIF: {e}")
                 return None
     
-    async def get_random_gif(self, mood: str = 'default'):
-        """Get a random GIF from Tenor based on mood"""
-        try:
-            # Use Tenor API (no key required for basic usage)
-            search_terms = self.gif_moods.get(mood, self.gif_moods['default'])
-            search_term = random.choice(search_terms)
-            
-            # Tenor API endpoint
-            url = f"https://tenor.googleapis.com/v2/search"
-            params = {
-                'q': search_term,
-                'key': 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ',  # Public Tenor key
-                'limit': 20,
-                'media_filter': 'gif'
-            }
-            
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url, params=params, timeout=10.0)
-                if response.status_code == 200:
-                    data = response.json()
-                    if data.get('results'):
-                        gif = random.choice(data['results'])
-                        return gif['media_formats']['gif']['url']
-        except Exception as e:
-            logger.error(f"Error fetching GIF: {e}")
+    async def get_random_gif_from_directory(self, directory: str) -> str:
+        """Get a random GIF from a specific directory in the snipe/animated-gifs repo"""
+        # GitHub API URL to get directory contents
+        api_url = f"https://api.github.com/repos/snipe/animated-gifs/contents/{directory}"
         
-        # Fallback GIFs if API fails
-        fallback_gifs = [
-            "https://media.tenor.com/images/a3b96a9e71c8b2a4b5b9d0e6e3a1a2b1/tenor.gif",
-            "https://media1.tenor.com/m/SuB9sd9uT9IAAAAC/anime-happy.gif",
-            "https://media1.tenor.com/m/PL1gYFz_YpkAAAAC/kawaii-anime.gif"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(api_url, timeout=10.0)
+                response.raise_for_status()
+                files = response.json()
+                
+                # Filter for gif/animation files
+                gif_files = [
+                    file for file in files 
+                    if file['type'] == 'file' and 
+                    any(file['name'].lower().endswith(ext) for ext in self.gif_extensions)
+                ]
+                
+                if gif_files:
+                    # Pick a random gif
+                    random_gif = random.choice(gif_files)
+                    # Return the raw GitHub URL
+                    return random_gif['download_url']
+                else:
+                    logger.warning(f"No GIF files found in directory: {directory}")
+                    return None
+                    
+            except Exception as e:
+                logger.error(f"Error fetching GIFs from directory {directory}: {e}")
+                return None
+    
+    async def get_random_gif(self, feeling: str = None):
+        """Get a random GIF based on feeling/emotion"""
+        # If no specific feeling, pick a random feeling
+        if not feeling or feeling not in self.feeling_to_directories:
+            feeling = random.choice(list(self.feeling_to_directories.keys()))
+        
+        # Get directories for this feeling
+        directories = self.feeling_to_directories[feeling]
+        
+        # Try directories until we find one with GIFs
+        random.shuffle(directories)  # Randomize order
+        
+        for directory in directories:
+            gif_url = await self.get_random_gif_from_directory(directory)
+            if gif_url:
+                return gif_url
+        
+        # Fallback: try a random directory from all available
+        all_directories = [
+            'adorbs', 'Alt-Everything', 'angry-frustrated', 'Approved', 
+            'badass-nailed-it', 'Battle-Stations', 'Biology', 'bored-tired-depressed',
+            'busted', 'bye', 'Cant-Even', 'cheating', 'Childish', 'Coffee',
+            'come-here', 'condescending', 'deal-with-it', 'Debate', 
+            'excited-happy', 'confused', 'dont-understand', 'smug', 'wtf',
+            'shock', 'Surprise', 'thank-you', 'yes', 'oh-hai-friend', 
+            'welcome-friendly', 'Thinking'
         ]
-        return random.choice(fallback_gifs)
+        
+        random_directory = random.choice(all_directories)
+        return await self.get_random_gif_from_directory(random_directory)
     
     async def generate_gemini_response(self, prompt: str) -> str:
         """Generate response using Gemini API"""
@@ -228,8 +265,8 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
         )
         await self.send_message(chat_id, response)
         
-        # Send a proud GIF
-        gif_url = await self.get_random_gif('proud')
+        # Send a happy GIF
+        gif_url = await self.get_random_gif('happy')
         if gif_url:
             await self.send_gif(chat_id, gif_url)
     
@@ -247,8 +284,8 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
         """Handle regular text messages"""
         logger.info(f"Received message: {message_text}")
         
-        # Determine mood based on message content
-        mood = self.determine_mood(message_text)
+        # Determine feeling based on message content
+        feeling = self.determine_feeling(message_text)
         
         # Check if the message is asking about Sai
         sai_keywords = ['sai', 'sai mahendra', 'who is sai', 'about sai', 'tell me about sai', 'bejawada sai mahendra', 'mahendra']
@@ -263,50 +300,66 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
             response = await self.generate_gemini_response(prompt)
             await self.send_message(chat_id, response)
             
-            # Send contextual GIF based on mood (30% chance to keep it not overwhelming)
+            # Send contextual GIF based on feeling (30% chance to keep it not overwhelming)
             if random.random() < 0.3:
-                gif_url = await self.get_random_gif(mood)
+                gif_url = await self.get_random_gif(feeling)
                 if gif_url:
                     await self.send_gif(chat_id, gif_url)
                     
         except Exception as e:
             logger.error(f"Error generating response: {e}")
             await self.send_message(chat_id, "Oops! Something went wrong while I was thinking. Please try again in a moment.")
-            # Send confused GIF for errors
-            gif_url = await self.get_random_gif('confused')
+            # Send sad GIF for errors
+            gif_url = await self.get_random_gif('sad')
             if gif_url:
                 await self.send_gif(chat_id, gif_url)
     
-    def determine_mood(self, message_text: str) -> str:
-        """Determine mood based on message content"""
+    def determine_feeling(self, message_text: str) -> str:
+        """Determine feeling/emotion based on message content"""
         message_lower = message_text.lower()
         
         # Greeting patterns
         if any(word in message_lower for word in ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening']):
             return 'greeting'
         
+        # WTF/shocked patterns
+        elif any(word in message_lower for word in ['wtf', 'what the', 'omg', 'unbelievable', 'crazy', 'insane']):
+            return 'wtf'
+        
         # Excited/positive patterns
         elif any(word in message_lower for word in ['wow', 'amazing', 'awesome', 'great', 'fantastic', 'incredible', 'cool']):
             return 'excited'
+        
+        # Happy patterns
+        elif any(word in message_lower for word in ['happy', 'good', 'nice', 'love', 'like', 'perfect']):
+            return 'happy'
+        
+        # Approved/agreement patterns
+        elif any(word in message_lower for word in ['yes', 'correct', 'right', 'exactly', 'agree', 'approved']):
+            return 'approved'
         
         # Grateful patterns
         elif any(word in message_lower for word in ['thanks', 'thank you', 'appreciate', 'grateful']):
             return 'grateful'
         
-        # Project/achievement related (proud)
-        elif any(word in message_lower for word in ['project', 'achievement', 'skill', 'work', 'experience', 'portfolio']):
-            return 'proud'
+        # Cute patterns
+        elif any(word in message_lower for word in ['cute', 'adorable', 'sweet', 'kawaii', 'aww']):
+            return 'cute'
+        
+        # Serious/work related
+        elif any(word in message_lower for word in ['project', 'work', 'business', 'professional', 'serious']):
+            return 'serious'
         
         # Thinking/question patterns
         elif any(word in message_lower for word in ['what', 'how', 'why', 'when', 'where', '?']):
             return 'thinking'
         
-        # Confused patterns
-        elif any(word in message_lower for word in ['confused', 'don\'t understand', 'unclear', 'what do you mean']):
-            return 'confused'
+        # Sad/confused patterns
+        elif any(word in message_lower for word in ['sad', 'confused', 'don\'t understand', 'unclear', 'help', 'problem']):
+            return 'sad'
         
         else:
-            return 'default'
+            return None  # Random feeling will be picked
 
 # Initialize bot
 bot = SaiBot()
