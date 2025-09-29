@@ -2,6 +2,7 @@ import os
 import logging
 from typing import Dict, Any
 import asyncio
+import random
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 import google.generativeai as genai
@@ -35,11 +36,24 @@ class SaiBot:
         
         # System instruction for Gemini
         self.system_instruction = f"""
-        You are a cute and expressive assistant without emojis.
-When asked about Sai or Sai Mahendra, reply warmly, playfully, and based on {self.sai_info}.
-Keep answers under 3 lines, concise and friendly.
-Always be helpful, engaging.
+You are Sai's personal AI assistant - talk like a real human friend, not a formal bot!
+Be casual, friendly, and conversational. Use contractions (like "he's", "that's", "we're").
+When talking about Sai Mahendra, be enthusiastic and proud - he's genuinely amazing!
+Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
         """
+        
+        # GIF categories for different moods/contexts
+        self.gif_moods = {
+            'greeting': ['anime hello', 'cute wave', 'kawaii greeting', 'anime wave'],
+            'excited': ['anime excited', 'anime happy', 'kawaii excited', 'cute celebration'],
+            'thinking': ['anime thinking', 'anime confused', 'kawaii hmm'],
+            'proud': ['anime proud', 'kawaii proud', 'anime thumbs up'],
+            'thanks': ['anime thank you', 'kawaii thanks', 'cute bow'],
+            'bye': ['anime goodbye', 'cute bye', 'kawaii wave'],
+            'projects': ['anime coding', 'kawaii computer', 'anime work'],
+            'resume': ['anime professional', 'kawaii work', 'anime office'],
+            'default': ['kawaii', 'anime cute', 'cute anime girl', 'chibi']
+        }
     
     def load_sai_info(self):
         """Load information about Sai from re.txt file"""
@@ -109,6 +123,60 @@ Always be helpful, engaging.
                 await self.send_message(chat_id, f"📄 Here's Sai's resume: {document_url}")
                 raise
     
+    async def send_gif(self, chat_id: int, gif_url: str, caption: str = None):
+        """Send GIF to Telegram chat"""
+        url = f"https://api.telegram.org/bot{self.bot_token}/sendAnimation"
+        payload = {
+            "chat_id": chat_id,
+            "animation": gif_url,
+        }
+        if caption:
+            payload["caption"] = caption
+            payload["parse_mode"] = "HTML"
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(url, json=payload, timeout=15.0)
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                logger.error(f"Error sending GIF: {e}")
+                return None
+    
+    async def get_random_gif(self, mood: str = 'default'):
+        """Get a random GIF from Tenor based on mood"""
+        try:
+            # Use Tenor API (no key required for basic usage)
+            search_terms = self.gif_moods.get(mood, self.gif_moods['default'])
+            search_term = random.choice(search_terms)
+            
+            # Tenor API endpoint
+            url = f"https://tenor.googleapis.com/v2/search"
+            params = {
+                'q': search_term,
+                'key': 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ',  # Public Tenor key
+                'limit': 20,
+                'media_filter': 'gif'
+            }
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, params=params, timeout=10.0)
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get('results'):
+                        gif = random.choice(data['results'])
+                        return gif['media_formats']['gif']['url']
+        except Exception as e:
+            logger.error(f"Error fetching GIF: {e}")
+        
+        # Fallback GIFs if API fails
+        fallback_gifs = [
+            "https://media.tenor.com/images/a3b96a9e71c8b2a4b5b9d0e6e3a1a2b1/tenor.gif",
+            "https://media1.tenor.com/m/SuB9sd9uT9IAAAAC/anime-happy.gif",
+            "https://media1.tenor.com/m/PL1gYFz_YpkAAAAC/kawaii-anime.gif"
+        ]
+        return random.choice(fallback_gifs)
+    
     async def generate_gemini_response(self, prompt: str) -> str:
         """Generate response using Gemini API"""
         try:
@@ -136,6 +204,11 @@ Always be helpful, engaging.
  <h1>Hello visitor </h1><br><p>I am telegram bot created by sai mahendra, you can ask me anything about him i will try to tell about his work and details as per data i trained for 
         """
         await self.send_message(chat_id, welcome_message.strip())
+        
+        # Send a greeting GIF
+        gif_url = await self.get_random_gif('greeting')
+        if gif_url:
+            await self.send_gif(chat_id, gif_url)
     
     async def handle_help_command(self, chat_id: int):
         """Handle /help command"""
@@ -154,15 +227,28 @@ Always be helpful, engaging.
             "Tell me about Sai Mahendra, the programmer. Be cute and expressive but don't use emojis."
         )
         await self.send_message(chat_id, response)
+        
+        # Send a proud GIF
+        gif_url = await self.get_random_gif('proud')
+        if gif_url:
+            await self.send_gif(chat_id, gif_url)
     
     async def handle_resume_command(self, chat_id: int):
         """Handle /resume command - sends Sai's resume PDF"""
         resume_url = "https://raw.githubusercontent.com/saimahendra282/telegram_bot/main/allpurposefin.pdf"
         await self.send_document(chat_id, resume_url)
+        
+        # Send an excited GIF
+        gif_url = await self.get_random_gif('excited')
+        if gif_url:
+            await self.send_gif(chat_id, gif_url)
     
     async def handle_message(self, chat_id: int, message_text: str):
         """Handle regular text messages"""
         logger.info(f"Received message: {message_text}")
+        
+        # Determine mood based on message content
+        mood = self.determine_mood(message_text)
         
         # Check if the message is asking about Sai
         sai_keywords = ['sai', 'sai mahendra', 'who is sai', 'about sai', 'tell me about sai', 'bejawada sai mahendra', 'mahendra']
@@ -176,9 +262,51 @@ Always be helpful, engaging.
         try:
             response = await self.generate_gemini_response(prompt)
             await self.send_message(chat_id, response)
+            
+            # Send contextual GIF based on mood (30% chance to keep it not overwhelming)
+            if random.random() < 0.3:
+                gif_url = await self.get_random_gif(mood)
+                if gif_url:
+                    await self.send_gif(chat_id, gif_url)
+                    
         except Exception as e:
             logger.error(f"Error generating response: {e}")
             await self.send_message(chat_id, "Oops! Something went wrong while I was thinking. Please try again in a moment.")
+            # Send confused GIF for errors
+            gif_url = await self.get_random_gif('confused')
+            if gif_url:
+                await self.send_gif(chat_id, gif_url)
+    
+    def determine_mood(self, message_text: str) -> str:
+        """Determine mood based on message content"""
+        message_lower = message_text.lower()
+        
+        # Greeting patterns
+        if any(word in message_lower for word in ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening']):
+            return 'greeting'
+        
+        # Excited/positive patterns
+        elif any(word in message_lower for word in ['wow', 'amazing', 'awesome', 'great', 'fantastic', 'incredible', 'cool']):
+            return 'excited'
+        
+        # Grateful patterns
+        elif any(word in message_lower for word in ['thanks', 'thank you', 'appreciate', 'grateful']):
+            return 'grateful'
+        
+        # Project/achievement related (proud)
+        elif any(word in message_lower for word in ['project', 'achievement', 'skill', 'work', 'experience', 'portfolio']):
+            return 'proud'
+        
+        # Thinking/question patterns
+        elif any(word in message_lower for word in ['what', 'how', 'why', 'when', 'where', '?']):
+            return 'thinking'
+        
+        # Confused patterns
+        elif any(word in message_lower for word in ['confused', 'don\'t understand', 'unclear', 'what do you mean']):
+            return 'confused'
+        
+        else:
+            return 'default'
 
 # Initialize bot
 bot = SaiBot()
