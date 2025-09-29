@@ -95,10 +95,14 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
     
     async def send_message(self, chat_id: int, text: str):
         """Send message to Telegram chat"""
+        if not text or not str(text).strip():
+            logger.warning("Empty message text, skipping send")
+            return None
+            
         url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
         payload = {
             "chat_id": chat_id,
-            "text": text,
+            "text": str(text)[:4096],  # Telegram message limit
             "parse_mode": "HTML"
         }
         
@@ -106,10 +110,13 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
             try:
                 response = await client.post(url, json=payload, timeout=10.0)
                 response.raise_for_status()
-                return response.json()
+                result = response.json()
+                logger.info(f"Message sent successfully to chat {chat_id}")
+                return result
             except Exception as e:
-                logger.error(f"Error sending message: {e}")
-                raise
+                logger.error(f"Error sending message to chat {chat_id}: {e}")
+                # Don't raise, just return None to prevent webhook failures
+                return None
     
     async def send_document(self, chat_id: int, document_url: str, caption: str = None):
         """Send document/PDF to Telegram chat"""
@@ -135,22 +142,29 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
     
     async def send_gif(self, chat_id: int, gif_url: str, caption: str = None):
         """Send GIF to Telegram chat"""
+        if not gif_url:
+            logger.warning("No GIF URL provided, skipping send")
+            return None
+            
         url = f"https://api.telegram.org/bot{self.bot_token}/sendAnimation"
         payload = {
             "chat_id": chat_id,
             "animation": gif_url,
         }
         if caption:
-            payload["caption"] = caption
+            payload["caption"] = str(caption)[:1024]  # Caption limit
             payload["parse_mode"] = "HTML"
         
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.post(url, json=payload, timeout=15.0)
                 response.raise_for_status()
-                return response.json()
+                result = response.json()
+                logger.info(f"GIF sent successfully to chat {chat_id}")
+                return result
             except Exception as e:
-                logger.error(f"Error sending GIF: {e}")
+                logger.error(f"Error sending GIF to chat {chat_id}: {e}")
+                # Don't raise, just return None to prevent webhook failures
                 return None
     
     async def get_random_gif(self, feeling: str = None):
@@ -304,37 +318,55 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
     
     async def handle_message(self, chat_id: int, message_text: str):
         """Handle regular text messages"""
-        logger.info(f"Received message: {message_text}")
+        logger.info(f"Handling message from chat {chat_id}: {message_text}")
         
-        # Determine feeling based on message content
-        feeling = self.determine_feeling(message_text)
-        
-        # Check if the message is asking about Sai
-        sai_keywords = ['sai', 'sai mahendra', 'who is sai', 'about sai', 'tell me about sai', 'bejawada sai mahendra', 'mahendra']
-        is_about_sai = any(keyword in message_text.lower() for keyword in sai_keywords)
-        
-        if is_about_sai:
-            prompt = f"The user is asking about Sai: '{message_text}'. {self.system_instruction}"
-        else:
-            prompt = f"{self.system_instruction}\n\nUser message: {message_text}"
+        # Validate input
+        if not message_text or not str(message_text).strip():
+            logger.warning(f"Empty message from chat {chat_id}")
+            return
         
         try:
+            # Determine feeling based on message content
+            feeling = self.determine_feeling(message_text)
+            logger.info(f"Determined feeling: {feeling}")
+            
+            # Check if the message is asking about Sai
+            sai_keywords = ['sai', 'sai mahendra', 'who is sai', 'about sai', 'tell me about sai', 'bejawada sai mahendra', 'mahendra']
+            is_about_sai = any(keyword in message_text.lower() for keyword in sai_keywords)
+            
+            if is_about_sai:
+                prompt = f"The user is asking about Sai: '{message_text}'. {self.system_instruction}"
+            else:
+                prompt = f"{self.system_instruction}\n\nUser message: {message_text}"
+            
+            # Generate response
             response = await self.generate_gemini_response(prompt)
-            await self.send_message(chat_id, response)
+            if response:
+                await self.send_message(chat_id, response)
+                logger.info(f"Response sent to chat {chat_id}")
             
             # Send contextual GIF based on feeling (30% chance to keep it not overwhelming)
-            if random.random() < 0.3:
-                gif_url = await self.get_random_gif(feeling)
-                if gif_url:
-                    await self.send_gif(chat_id, gif_url)
+            if random.random() < 0.3 and feeling:
+                try:
+                    gif_url = await self.get_random_gif(feeling)
+                    if gif_url:
+                        await self.send_gif(chat_id, gif_url)
+                        logger.info(f"GIF sent to chat {chat_id}")
+                except Exception as gif_error:
+                    logger.error(f"Error sending GIF: {gif_error}")
+                    # Continue even if GIF fails
                     
         except Exception as e:
-            logger.error(f"Error generating response: {e}")
-            await self.send_message(chat_id, "Oops! Something went wrong while I was thinking. Please try again in a moment.")
-            # Send sad GIF for errors
-            gif_url = await self.get_random_gif('sad')
-            if gif_url:
-                await self.send_gif(chat_id, gif_url)
+            logger.error(f"Error handling message from chat {chat_id}: {e}")
+            try:
+                await self.send_message(chat_id, "Oops! Something went wrong while I was thinking. Please try again in a moment.")
+                # Send sad GIF for errors
+                gif_url = await self.get_random_gif('sad')
+                if gif_url:
+                    await self.send_gif(chat_id, gif_url)
+            except Exception as error_send_error:
+                logger.error(f"Failed to send error message: {error_send_error}")
+                # If we can't even send error message, just log it
     
     def determine_feeling(self, message_text: str) -> str:
         """Determine feeling/emotion based on message content"""
@@ -395,36 +427,73 @@ async def root():
 async def webhook(request: Request):
     """Handle incoming webhook from Telegram"""
     try:
-        data = await request.json()
-        logger.info(f"Received webhook data: {data}")
+        # First, let's get the raw data to see what we're receiving
+        raw_data = await request.body()
+        logger.info(f"Raw webhook data: {raw_data}")
+        
+        # Parse JSON
+        try:
+            data = await request.json()
+        except Exception as json_error:
+            logger.error(f"JSON parsing error: {json_error}")
+            logger.error(f"Raw data that failed to parse: {raw_data}")
+            return JSONResponse({"status": "ok"})  # Return OK to avoid telegram retries
+        
+        logger.info(f"Parsed webhook data: {data}")
         
         # Check if it's a message update
         if 'message' not in data:
+            logger.info("No message in webhook data, returning OK")
             return JSONResponse({"status": "ok"})
         
         message = data['message']
+        
+        # Validate message structure
+        if 'chat' not in message or 'id' not in message['chat']:
+            logger.error("Invalid message structure - missing chat ID")
+            return JSONResponse({"status": "ok"})
+            
         chat_id = message['chat']['id']
+        logger.info(f"Processing message for chat_id: {chat_id}")
         
         # Handle commands
         if 'text' in message:
             text = message['text']
+            logger.info(f"Processing text message: {text}")
             
-            if text.startswith('/start'):
-                await bot.handle_start_command(chat_id)
-            elif text.startswith('/help'):
-                await bot.handle_help_command(chat_id)
-            elif text.startswith('/about_sai'):
-                await bot.handle_about_sai_command(chat_id)
-            elif text.startswith('/resume'):
-                await bot.handle_resume_command(chat_id)
-            else:
-                await bot.handle_message(chat_id, text)
+            try:
+                if text.startswith('/start'):
+                    await bot.handle_start_command(chat_id)
+                elif text.startswith('/help'):
+                    await bot.handle_help_command(chat_id)
+                elif text.startswith('/about_sai'):
+                    await bot.handle_about_sai_command(chat_id)
+                elif text.startswith('/resume'):
+                    await bot.handle_resume_command(chat_id)
+                else:
+                    await bot.handle_message(chat_id, text)
+                    
+                logger.info(f"Successfully processed message: {text}")
+                
+            except Exception as handler_error:
+                logger.error(f"Error in message handler: {handler_error}")
+                # Try to send error message to user
+                try:
+                    await bot.send_message(chat_id, "Sorry, I encountered an error processing your message. Please try again.")
+                except:
+                    pass  # If we can't send error message, just log it
+        else:
+            logger.info("Message has no text content")
         
         return JSONResponse({"status": "ok"})
         
     except Exception as e:
-        logger.error(f"Webhook error: {e}")
-        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+        logger.error(f"Webhook critical error: {e}")
+        logger.error(f"Error type: {type(e)}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        # Always return 200 OK to prevent Telegram from retrying
+        return JSONResponse({"status": "error_logged"}, status_code=200)
 
 @app.get("/set_webhook")
 async def set_webhook(webhook_url: str = None):
