@@ -273,15 +273,15 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
     
     async def handle_start_command(self, chat_id: int):
         """Handle /start command"""
+        # Send a greeting GIF first
+        gif_url = await self.get_random_gif('greeting')
+        if gif_url:
+            await self.send_gif(chat_id, gif_url)
+        
         welcome_message = """
  <h1>Hello visitor </h1><br><p>I am telegram bot created by sai mahendra, you can ask me anything about him i will try to tell about his work and details as per data i trained for 
         """
         await self.send_message(chat_id, welcome_message.strip())
-        
-        # Send a greeting GIF
-        gif_url = await self.get_random_gif('greeting')
-        if gif_url:
-            await self.send_gif(chat_id, gif_url)
     
     async def handle_help_command(self, chat_id: int):
         """Handle /help command"""
@@ -296,25 +296,25 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
     
     async def handle_about_sai_command(self, chat_id: int):
         """Handle /about_sai command"""
+        # Send a happy GIF first
+        gif_url = await self.get_random_gif('happy')
+        if gif_url:
+            await self.send_gif(chat_id, gif_url)
+        
         response = await self.generate_gemini_response(
             "Tell me about Sai Mahendra, the programmer. Be cute and expressive but don't use emojis."
         )
         await self.send_message(chat_id, response)
-        
-        # Send a happy GIF
-        gif_url = await self.get_random_gif('happy')
-        if gif_url:
-            await self.send_gif(chat_id, gif_url)
     
     async def handle_resume_command(self, chat_id: int):
         """Handle /resume command - sends Sai's resume PDF"""
-        resume_url = "https://raw.githubusercontent.com/saimahendra282/telegram_bot/main/allpurposefin.pdf"
-        await self.send_document(chat_id, resume_url)
-        
-        # Send an excited GIF
+        # Send an excited GIF first
         gif_url = await self.get_random_gif('excited')
         if gif_url:
             await self.send_gif(chat_id, gif_url)
+        
+        resume_url = "https://raw.githubusercontent.com/saimahendra282/telegram_bot/main/allpurposefin.pdf"
+        await self.send_document(chat_id, resume_url)
     
     async def handle_message(self, chat_id: int, message_text: str):
         """Handle regular text messages"""
@@ -339,13 +339,7 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
             else:
                 prompt = f"{self.system_instruction}\n\nUser message: {message_text}"
             
-            # Generate response
-            response = await self.generate_gemini_response(prompt)
-            if response:
-                await self.send_message(chat_id, response)
-                logger.info(f"Response sent to chat {chat_id}")
-            
-            # Send contextual GIF based on feeling (30% chance to keep it not overwhelming)
+            # Send contextual GIF based on feeling first (30% chance to keep it not overwhelming)
             if random.random() < 0.3 and feeling:
                 try:
                     gif_url = await self.get_random_gif(feeling)
@@ -355,15 +349,22 @@ Keep responses natural and under 2-3 sentences. Based on: {self.sai_info}
                 except Exception as gif_error:
                     logger.error(f"Error sending GIF: {gif_error}")
                     # Continue even if GIF fails
+            
+            # Generate response
+            response = await self.generate_gemini_response(prompt)
+            if response:
+                await self.send_message(chat_id, response)
+                logger.info(f"Response sent to chat {chat_id}")
                     
         except Exception as e:
             logger.error(f"Error handling message from chat {chat_id}: {e}")
             try:
-                await self.send_message(chat_id, "Oops! Something went wrong while I was thinking. Please try again in a moment.")
-                # Send sad GIF for errors
+                # Send sad GIF for errors first
                 gif_url = await self.get_random_gif('sad')
                 if gif_url:
                     await self.send_gif(chat_id, gif_url)
+                
+                await self.send_message(chat_id, "Oops! Something went wrong while I was thinking. Please try again in a moment.")
             except Exception as error_send_error:
                 logger.error(f"Failed to send error message: {error_send_error}")
                 # If we can't even send error message, just log it
