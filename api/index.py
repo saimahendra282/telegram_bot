@@ -33,7 +33,7 @@ class SaiBot:
         
         # Configure Gemini API
         genai.configure(api_key=self.gemini_api_key)
-        self.model = genai.GenerativeModel('gemini-2.0-flash')
+        self.model = genai.GenerativeModel('gemini-2.0-flash-lite')
         
         # Load reference information about Sai
         self.load_sai_info()
